@@ -1,0 +1,20 @@
+# TEST_RESULTS
+
+Use this file to paste CI/QA outputs.
+
+- Compiler output:
+  - [paste compiler output here]
+
+- pending_requests.csv:
+  - [attach content]
+
+- expected_map.csv:
+  - [attach content]
+
+- Key log extracts:
+  - [paste relevant TRACE logs]
+
+- QA checklist (tick and add notes):
+  - [ ] Compilar Gold_Scalper.mq5 y Core/ExecutionEngine.mqh sin errores.
+  - [ ] TestPartialFill (simulado) ...
+  - ...
