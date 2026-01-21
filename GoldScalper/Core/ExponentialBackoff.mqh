@@ -57,8 +57,54 @@ struct RetryMetrics
    int    circuit_breaker_triggers;
 };
 
-// ExponentialBackoff class - Core port
+// Simple backoff interface for ExecutionEngine compatibility
 class ExponentialBackoff
+{
+private:
+   int    m_base_ms;
+   double m_multiplier;
+   int    m_max_ms;
+   int    m_current_attempt;
+
+public:
+   ExponentialBackoff()
+   {
+      m_base_ms = 100;
+      m_multiplier = 2.0;
+      m_max_ms = 5000;
+      m_current_attempt = 0;
+   }
+
+   void Init(int base_ms, double multiplier, int max_ms)
+   {
+      m_base_ms = base_ms;
+      m_multiplier = multiplier;
+      m_max_ms = max_ms;
+      m_current_attempt = 0;
+   }
+
+   void Reset()
+   {
+      m_current_attempt = 0;
+   }
+
+   int GetNextDelay()
+   {
+      int delay = (int)(m_base_ms * MathPow(m_multiplier, m_current_attempt));
+      if(delay > m_max_ms) delay = m_max_ms;
+      m_current_attempt++;
+      return delay;
+   }
+
+   void Wait()
+   {
+      int delay = GetNextDelay();
+      Sleep(delay);
+   }
+};
+
+// ExponentialBackoffAdvanced class - Core port with strategies
+class ExponentialBackoffAdvanced
 {
 private:
    BackoffConfig m_config;
@@ -130,7 +176,7 @@ private:
    }
 
 public:
-   ExponentialBackoff(BackoffConfig &config)
+   ExponentialBackoffAdvanced(BackoffConfig &config)
    {
       m_config = config;
       ZeroMemory(m_metrics);

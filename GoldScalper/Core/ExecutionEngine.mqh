@@ -396,6 +396,21 @@ public:
          return;
       }
 
+      // Check if trade context is busy and wait with backoff
+      int busy_retries = 0;
+      m_backoff.Reset();
+      while(IsTradeContextBusy() && busy_retries < m_max_retries)
+      {
+         g_trace.Log(TRACE_WARNING, "EXEC", StringFormat("RetryPartial: TradeContextBusy, waiting... retry=%d", busy_retries + 1));
+         m_backoff.Wait();
+         busy_retries++;
+      }
+      if(IsTradeContextBusy())
+      {
+         g_trace.Log(TRACE_WARNING, "EXEC", "RetryPartial: TradeContext still busy after max retries, skipping retry");
+         return;
+      }
+
       MqlTradeRequest req; MqlTradeResult res; ZeroMemory(req); ZeroMemory(res);
       req.action = TRADE_ACTION_DEAL;
       req.symbol = r.symbol;
@@ -511,6 +526,21 @@ public:
       while(attempts <= m_max_retries && remaining > 0.0)
       {
          if(!g_risk_manager.CheckDrawdown()) { out.error_msg = "RiskManager blocked execution (drawdown/kill-switch)"; return out; }
+
+         // Check if trade context is busy and wait with backoff
+         int busy_retries = 0;
+         while(IsTradeContextBusy() && busy_retries < m_max_retries)
+         {
+            g_trace.Log(TRACE_WARNING, "EXEC", StringFormat("TradeContextBusy, waiting... retry=%d", busy_retries + 1));
+            m_backoff.Wait();
+            busy_retries++;
+         }
+         if(IsTradeContextBusy())
+         {
+            out.error_msg = "TradeContext busy after max retries";
+            g_trace.Log(TRACE_WARNING, "EXEC", "TradeContext still busy after max retries, canceling order");
+            return out;
+         }
 
          ZeroMemory(res);
          req.volume = remaining;
