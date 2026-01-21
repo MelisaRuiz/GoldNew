@@ -125,7 +125,8 @@ private:
       if (IsCriticalError(error)) return false;
       // Timeout check if applicable (handled externally in MQL5)
       // Circuit breaker: Integrate with HealthMonitor
-      if (m_config.circuit_breaker_integration && g_health_monitor.GetState() == HEALTH_HALTED) return false;
+      // NOTE: GetState() method does not exist in HealthMonitor - using IsTradingAllowed instead
+      if (m_config.circuit_breaker_integration && g_health_monitor != NULL && !g_health_monitor->IsTradingAllowed("")) return false;
       return true;
    }
 
@@ -181,9 +182,10 @@ public:
                Print("RETRY_ATTEMPT: Operation=", m_config.operation_name, " Attempt=", attempt + 1);
 
             // Trigger HealthMonitor breaker if consecutive high
+            // NOTE: SetState() method does not exist in HealthMonitor - using TriggerBackoff instead
             if (m_config.circuit_breaker_integration && m_metrics.consecutive_failures >= 3)
             {
-               g_health_monitor.SetState(HEALTH_CRITICAL);
+               if(g_health_monitor != NULL) g_health_monitor->TriggerBackoff(300); // 5 min breaker
                m_metrics.circuit_breaker_triggers++;
             }
          }

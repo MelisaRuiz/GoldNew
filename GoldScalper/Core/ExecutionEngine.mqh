@@ -15,7 +15,9 @@
 #include "Core/RiskManager.mqh"
 #include "Core/ExponentialBackoff.mqh"
 #include "Core/SessionManager.mqh"
+#include "Core/ImmutableCore.mqh"
 #include "Monitoring/Monitoring.mqh"
+#include "Monitoring/HealthMonitor.mqh"
 
 // NOTE: This file expects globals:
 //   g_state_manager (StateManager), g_trace (TraceAlert/TraceLogger), g_spread_monitor, g_risk_manager, g_session_manager
@@ -481,7 +483,25 @@ public:
       ExecutionResult out;
       if(!signal.valid) { out.error_msg = "Invalid trading signal"; return out; }
 
+      // INMUTABLE: Validar símbolo XAUUSD exclusivamente
+      if(!ImmutableCore::ValidateSymbol(symbol))
+      {
+         out.error_msg = "Symbol validation failed: Only " + ImmutableCore::GetAllowedSymbol() + " allowed";
+         g_trace.Log(TRACE_ERROR, "EXEC", out.error_msg);
+         return out;
+      }
+
       if(TimeCurrent() < m_breaker_end) { out.error_msg = "Execution breaker active"; return out; }
+
+      // HealthMonitor governor check - blocks unhealthy trades
+      #ifdef HEALTH_MONITOR_MQH
+         if(g_health_monitor != NULL && !g_health_monitor->IsTradingAllowed(symbol))
+         {
+            out.error_msg = "HealthMonitor blocked execution (drawdown/kill_switch/breakers)";
+            g_trace.Log(TRACE_WARNING, "EXEC", "Execute blocked by HealthMonitor for " + symbol);
+            return out;
+         }
+      #endif
 
       if(!g_session_manager.IsTradingSessionAllowed(symbol)) { out.error_msg = "Trading session not allowed"; return out; }
 
