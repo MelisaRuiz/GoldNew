@@ -157,16 +157,29 @@ int OnInit()
 {
    g_run_id = StringFormat("%d_%d", (int)TimeCurrent(), (int)(MathRand() & 0xFFFF));
    ExpectedMapLoadFromFile();
+   // Initialize news filter and session manager
+   g_news_filter.Init();
+   g_session_manager.Init();
+   // Set timer for dynamic news fetch every 300 seconds
+   EventSetTimer(300);
    // other init steps omitted for brevity...
    return INIT_SUCCEEDED;
 }
 
 void OnDeinit(const int reason)
 {
+   EventKillTimer();
    ExpectedMapSaveToFile();
 }
 
-// OnTimer, OnTradeTransaction (key parts shown)
+// OnTimer: refresh news filter periodically
+void OnTimer()
+{
+   g_news_filter.FetchNews();
+   g_session_manager.Refresh();
+}
+
+// OnTradeTransaction (key parts shown)
 // OnTradeTransaction must attempt to correlate order->pending and persist EA map
 void OnTradeTransaction(const MqlTradeTransaction &trans, const MqlTradeRequest &req, const MqlTradeResult &res)
 {
