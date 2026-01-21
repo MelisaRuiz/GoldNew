@@ -16,9 +16,10 @@
 #include "Core/ExponentialBackoff.mqh"
 #include "Core/SessionManager.mqh"
 #include "Monitoring/Monitoring.mqh"
+#include "Monitoring/HealthMonitor.mqh"
 
 // NOTE: This file expects globals:
-//   g_state_manager (StateManager), g_trace (TraceAlert/TraceLogger), g_spread_monitor, g_risk_manager, g_session_manager
+//   g_state_manager (StateManager), g_trace (TraceAlert/TraceLogger), g_spread_monitor, g_risk_manager, g_session_manager, g_health_monitor
 
 // -------------------- Enums / Structs -------------------------------
 enum ReqStatus { REQ_PENDING = 0, REQ_FILLED = 1, REQ_CANCELED = 2, REQ_OVERFILLED = 3 };
@@ -480,6 +481,8 @@ public:
    {
       ExecutionResult out;
       if(!signal.valid) { out.error_msg = "Invalid trading signal"; return out; }
+
+      if(g_health_monitor != NULL && !g_health_monitor->IsTradingAllowed(symbol)) { out.error_msg = "HealthMonitor blocked trading"; return out; }
 
       if(TimeCurrent() < m_breaker_end) { out.error_msg = "Execution breaker active"; return out; }
 
