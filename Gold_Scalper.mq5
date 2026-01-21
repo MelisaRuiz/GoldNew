@@ -61,7 +61,6 @@ bool AtomicWriteFile(const string filename, string &lines[], int count)
    for(int i=0;i<count;i++) FileWriteString(h, lines[i] + "\n");
    FileClose(h);
 
-   // Write final by reading tmp content and writing it to final file (reduce partial window)
    int htmp = FileOpen(tmp, FILE_READ | FILE_COMMON | FILE_ANSI);
    if(htmp == INVALID_HANDLE) { FileDelete(tmp); g_trace.Log(TRACE_ERROR, "STATE", "AtomicWriteFile reopen tmp failed"); return false; }
    string content = "";
